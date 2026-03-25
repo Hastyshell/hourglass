@@ -52,8 +52,8 @@ fn draw(f: &mut ratatui::Frame, theme: &Theme) {
         size,
     );
 
-    // border(2) + padding_top(1) + title(2) + 5×items(15) + footer(2) = 22
-    let content_height = 22;
+    // border(2) + padding_top(1) + title(2) + 5×items(15) + footer(1) = 21
+    let content_height = 21;
     let content_width  = 72.min(size.width.saturating_sub(4));
 
     let vert = Layout::default()
@@ -86,7 +86,7 @@ fn draw(f: &mut ratatui::Frame, theme: &Theme) {
             Constraint::Length(3), // week
             Constraint::Length(3), // month
             Constraint::Length(3), // year
-            Constraint::Length(2), // footer
+            Constraint::Length(1), // footer
         ])
         .split(inner);
 
@@ -109,12 +109,10 @@ fn draw(f: &mut ratatui::Frame, theme: &Theme) {
     }
 
     f.render_widget(
-        Paragraph::new(vec![
-            Line::from(Span::styled("q / Esc             quit",
-                Style::default().fg(theme.footer))),
-            Line::from(Span::styled("--theme dark|light  color theme",
-                Style::default().fg(theme.footer))),
-        ]),
+        Paragraph::new(Line::from(Span::styled(
+            "q / Esc  quit",
+            Style::default().fg(theme.footer),
+        ))),
         chunks[6],
     );
 }

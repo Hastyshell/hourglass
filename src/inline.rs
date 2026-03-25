@@ -21,7 +21,6 @@ pub fn print_inline(theme: &Theme) -> io::Result<()> {
     let bc               = to_ct(theme.tui_border);
     let (ta_r, ta_g, ta_b) = rgb(theme.title_accent);
     let (ts_r, ts_g, ts_b) = rgb(theme.timestamp);
-    let (ft_r, ft_g, ft_b) = rgb(theme.footer);
 
     // ── Top border ────────────────────────────────────────────────────────────
     execute!(out,
@@ -55,23 +54,6 @@ pub fn print_inline(theme: &Theme) -> io::Result<()> {
     // ── Progress items ────────────────────────────────────────────────────────
     for item in &items {
         print_item(&mut out, item, theme, inner_width, outer_width, bc)?;
-    }
-
-    // ── Footer ────────────────────────────────────────────────────────────────
-    let footers = [
-        "-w / --watch        live updating mode",
-        "--theme dark|light  color theme",
-    ];
-    for line in &footers {
-        let rpad = inner_width.saturating_sub(line.len());
-        border_left(&mut out, bc)?;
-        execute!(out,
-            SetForegroundColor(CColor::Rgb { r: ft_r, g: ft_g, b: ft_b }),
-            Print(line),
-            Print(" ".repeat(rpad)),
-            ResetColor,
-        )?;
-        border_right(&mut out, bc)?;
     }
 
     // ── Bottom border ─────────────────────────────────────────────────────────
