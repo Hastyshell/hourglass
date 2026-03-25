@@ -21,11 +21,11 @@ pub fn dark_theme() -> Theme {
         tui_bg:       Color::Rgb(16,  16,  20),
         tui_border:   Color::Rgb(140, 140, 160),
         items: [
-            (Color::Rgb(0,   210, 210), Color::Rgb(0,   50,  50)),  // Hour  – cyan
-            (Color::Rgb(90,  140, 255), Color::Rgb(20,  30,  70)),  // Day   – blue
-            (Color::Rgb(210, 90,  210), Color::Rgb(55,  20,  55)),  // Week  – magenta
-            (Color::Rgb(230, 190, 0),   Color::Rgb(60,  50,  0)),   // Month – yellow
-            (Color::Rgb(80,  210, 80),  Color::Rgb(15,  55,  15)),  // Year  – green
+            (Color::Rgb(0,   210, 210), Color::Rgb(0,   80,  80)),  // Hour  – cyan
+            (Color::Rgb(90,  140, 255), Color::Rgb(30,  50,  100)), // Day   – blue
+            (Color::Rgb(210, 90,  210), Color::Rgb(85,  30,  85)),  // Week  – magenta
+            (Color::Rgb(230, 190, 0),   Color::Rgb(90,  75,  0)),   // Month – yellow
+            (Color::Rgb(80,  210, 80),  Color::Rgb(25,  85,  25)),  // Year  – green
         ],
     }
 }
