@@ -1,9 +1,10 @@
-use std::io;
+use std::io::{self, Write};
 use std::time::Duration;
 
 use chrono::{Datelike, Local, Timelike};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
+use crossterm::style::{Color as CColor, Print, ResetColor, SetForegroundColor};
 use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
@@ -19,29 +20,14 @@ const EMPTY: &str = "─";
 const HEAD: &str = "╸";
 
 fn main() -> io::Result<()> {
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let args: Vec<String> = std::env::args().collect();
+    let watch = args.iter().any(|a| a == "--watch" || a == "-w");
 
-    loop {
-        terminal.draw(|f| ui(f))?;
-
-        if event::poll(Duration::from_millis(200))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press
-                    && matches!(key.code, KeyCode::Char('q') | KeyCode::Esc)
-                {
-                    break;
-                }
-            }
-        }
+    if watch {
+        run_tui()
+    } else {
+        print_inline()
     }
-
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    Ok(())
 }
 
 struct ProgressItem {
@@ -50,6 +36,13 @@ struct ProgressItem {
     detail: String,
     color: Color,
     dim_color: Color,
+}
+
+fn to_ct(c: Color) -> CColor {
+    match c {
+        Color::Rgb(r, g, b) => CColor::Rgb { r, g, b },
+        _ => CColor::White,
+    }
 }
 
 fn get_progress_items() -> Vec<ProgressItem> {
@@ -64,8 +57,8 @@ fn get_progress_items() -> Vec<ProgressItem> {
     // Day progress
     let day_frac = (hour * 3600.0 + minute * 60.0 + second) / 86400.0;
 
-    // Week progress (Monday = 1)
-    let weekday = now.weekday().num_days_from_monday() as f64; // 0=Mon
+    // Week progress (Monday = 0)
+    let weekday = now.weekday().num_days_from_monday() as f64;
     let day_seconds = hour * 3600.0 + minute * 60.0 + second;
     let week_frac = (weekday * 86400.0 + day_seconds) / (7.0 * 86400.0);
 
@@ -92,12 +85,7 @@ fn get_progress_items() -> Vec<ProgressItem> {
         ProgressItem {
             label: "Hour",
             fraction: hour_frac,
-            detail: format!(
-                "{:02}:{:02}:{:02}",
-                now.hour(),
-                now.minute(),
-                now.second()
-            ),
+            detail: format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second()),
             color: Color::Rgb(0, 210, 210),
             dim_color: Color::Rgb(0, 50, 50),
         },
@@ -159,16 +147,117 @@ fn days_in_current_month(dt: &chrono::DateTime<Local>) -> u32 {
     .num_days() as u32
 }
 
+// ── Inline mode ──────────────────────────────────────────────────────────────
+
+fn print_inline() -> io::Result<()> {
+    let term_width = crossterm::terminal::size()
+        .map(|(w, _)| w as usize)
+        .unwrap_or(80);
+    let width = term_width.min(72);
+    let now = Local::now();
+    let items = get_progress_items();
+    let mut out = io::stdout();
+
+    // Title
+    execute!(
+        out,
+        SetForegroundColor(CColor::Rgb { r: 180, g: 140, b: 255 }),
+        Print("⏳ hourglass"),
+        SetForegroundColor(CColor::Rgb { r: 100, g: 100, b: 120 }),
+        Print(format!("  {}\n\n", now.format("%Y-%m-%d %H:%M:%S"))),
+        ResetColor,
+    )?;
+
+    for item in &items {
+        print_inline_item(&mut out, item, width)?;
+    }
+
+    // Footer hint
+    execute!(
+        out,
+        SetForegroundColor(CColor::Rgb { r: 60, g: 60, b: 80 }),
+        Print("-w / --watch  live update\n"),
+        ResetColor,
+    )?;
+
+    out.flush()
+}
+
+fn print_inline_item(out: &mut impl Write, item: &ProgressItem, width: usize) -> io::Result<()> {
+    let pct = item.fraction * 100.0;
+    let pct_str = format!("{:.1}%", pct);
+    let label_str = format!("{:<6}", item.label);
+    // Use char count for display width (handles ∕ correctly: 1 display col)
+    let detail_cols = item.detail.chars().count();
+    let pad = width.saturating_sub(label_str.len() + detail_cols + pct_str.len());
+
+    // Label + detail + percentage
+    execute!(
+        out,
+        SetForegroundColor(to_ct(item.color)),
+        Print(&label_str),
+        SetForegroundColor(CColor::Rgb { r: 140, g: 140, b: 160 }),
+        Print(&item.detail),
+        Print(" ".repeat(pad)),
+        SetForegroundColor(to_ct(item.color)),
+        Print(&pct_str),
+        Print("\n"),
+    )?;
+
+    // Bar
+    let filled = ((width as f64) * item.fraction).floor() as usize;
+    let filled = filled.min(width);
+
+    if filled > 0 {
+        execute!(out, SetForegroundColor(to_ct(item.color)), Print(FILLED.repeat(filled)))?;
+    }
+    if filled < width {
+        execute!(out, SetForegroundColor(to_ct(item.color)), Print(HEAD))?;
+        let remaining = width.saturating_sub(filled + 1);
+        if remaining > 0 {
+            execute!(out, SetForegroundColor(to_ct(item.dim_color)), Print(EMPTY.repeat(remaining)))?;
+        }
+    }
+
+    execute!(out, Print("\n\n"), ResetColor)
+}
+
+// ── TUI / watch mode ─────────────────────────────────────────────────────────
+
+fn run_tui() -> io::Result<()> {
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    loop {
+        terminal.draw(ui)?;
+
+        if event::poll(Duration::from_millis(200))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press
+                    && matches!(key.code, KeyCode::Char('q') | KeyCode::Esc)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    Ok(())
+}
+
 fn ui(f: &mut ratatui::Frame) {
     let size = f.area();
 
-    // Dark background
     f.render_widget(
         Block::default().style(Style::default().bg(Color::Rgb(16, 16, 20))),
         size,
     );
 
-    // Center the content
     // border(2) + padding_top(1) + title(2) + 5×items(15) + footer(1) = 21
     let content_height = 21;
     let content_width = 72.min(size.width.saturating_sub(4));
@@ -193,7 +282,6 @@ fn ui(f: &mut ratatui::Frame) {
 
     let area = horiz[1];
 
-    // Outer border
     let outer = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
@@ -204,7 +292,6 @@ fn ui(f: &mut ratatui::Frame) {
     let inner = outer.inner(area);
     f.render_widget(outer, area);
 
-    // Layout: title + items + footer
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -218,15 +305,12 @@ fn ui(f: &mut ratatui::Frame) {
         ])
         .split(inner);
 
-    // Title
     let now = Local::now();
     let title = Line::from(vec![
         Span::styled("⏳ ", Style::default().fg(Color::Rgb(180, 140, 255))),
         Span::styled(
             "hourglass",
-            Style::default()
-                .fg(Color::Rgb(180, 140, 255))
-                .bold(),
+            Style::default().fg(Color::Rgb(180, 140, 255)).bold(),
         ),
         Span::styled(
             format!("  {}", now.format("%Y-%m-%d %H:%M:%S")),
@@ -235,76 +319,70 @@ fn ui(f: &mut ratatui::Frame) {
     ]);
     f.render_widget(Paragraph::new(title), chunks[0]);
 
-    // Progress items
     let items = get_progress_items();
     for (i, item) in items.iter().enumerate() {
-        render_progress_item(f, chunks[i + 1], item);
+        render_tui_item(f, chunks[i + 1], item);
     }
 
-    // Footer
-    let footer = Line::from(vec![Span::styled(
-        "press q to quit",
-        Style::default().fg(Color::Rgb(60, 60, 80)),
-    )]);
-    f.render_widget(Paragraph::new(footer), chunks[6]);
+    f.render_widget(
+        Paragraph::new(Line::from(vec![Span::styled(
+            "q / Esc  quit",
+            Style::default().fg(Color::Rgb(60, 60, 80)),
+        )])),
+        chunks[6],
+    );
 }
 
-fn render_progress_item(f: &mut ratatui::Frame, area: Rect, item: &ProgressItem) {
+fn render_tui_item(f: &mut ratatui::Frame, area: Rect, item: &ProgressItem) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Length(1)])
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
         .split(area);
 
     let pct = item.fraction * 100.0;
+    let pct_str = format!("{:.1}%", pct);
+    let label_str = format!("{:<6}", item.label);
+    let detail_cols = item.detail.chars().count();
+    let pad = (area.width as usize)
+        .saturating_sub(label_str.len() + detail_cols + pct_str.len());
 
-    // Label line
     let label_line = Line::from(vec![
-        Span::styled(
-            format!("{:<6}", item.label),
-            Style::default().fg(item.color).bold(),
-        ),
-        Span::styled(
-            item.detail.clone(),
-            Style::default().fg(Color::Rgb(140, 140, 160)),
-        ),
-        Span::styled(
-            format!("{:>width$}", format!("{:.1}%", pct), width = (area.width as usize).saturating_sub(6 + item.detail.len())),
-            Style::default().fg(item.color),
-        ),
+        Span::styled(label_str, Style::default().fg(item.color).bold()),
+        Span::styled(item.detail.clone(), Style::default().fg(Color::Rgb(140, 140, 160))),
+        Span::styled(" ".repeat(pad), Style::default()),
+        Span::styled(pct_str, Style::default().fg(item.color)),
     ]);
     f.render_widget(Paragraph::new(label_line), chunks[0]);
 
-    // Progress bar
     let bar_width = area.width as usize;
     if bar_width == 0 {
         return;
     }
 
-    let filled_count = ((bar_width as f64) * item.fraction).floor() as usize;
-    let filled_count = filled_count.min(bar_width);
-
-    let dim_color = item.dim_color;
-
+    let filled = ((bar_width as f64) * item.fraction).floor() as usize;
+    let filled = filled.min(bar_width);
     let mut spans = Vec::new();
 
-    if filled_count > 0 {
+    if filled > 0 {
         spans.push(Span::styled(
-            FILLED.repeat(filled_count),
+            FILLED.repeat(filled),
             Style::default().fg(item.color),
         ));
     }
-
-    if filled_count < bar_width {
+    if filled < bar_width {
         spans.push(Span::styled(HEAD, Style::default().fg(item.color)));
-        let remaining = bar_width.saturating_sub(filled_count + 1);
+        let remaining = bar_width.saturating_sub(filled + 1);
         if remaining > 0 {
             spans.push(Span::styled(
                 EMPTY.repeat(remaining),
-                Style::default().fg(dim_color),
+                Style::default().fg(item.dim_color),
             ));
         }
     }
 
     f.render_widget(Paragraph::new(Line::from(spans)), chunks[1]);
 }
-
