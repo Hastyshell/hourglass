@@ -9,21 +9,24 @@ use crate::theme::{Theme, rgb, to_ct};
 use crate::{EMPTY, FILLED, HEAD};
 
 pub fn print_inline(theme: &Theme) -> io::Result<()> {
-    let term_width  = crossterm::terminal::size().map(|(w, _)| w as usize).unwrap_or(80);
+    let term_width = crossterm::terminal::size()
+        .map(|(w, _)| w as usize)
+        .unwrap_or(80);
     let outer_width = term_width.min(72);
     // │ + 2-space padding + content + 2-space padding + │  =  outer_width
     let inner_width = outer_width.saturating_sub(6);
 
-    let now   = Local::now();
+    let now = Local::now();
     let items = get_progress_items(theme);
     let mut out = io::stdout();
 
-    let bc               = to_ct(theme.tui_border);
+    let bc = to_ct(theme.tui_border);
     let (ta_r, ta_g, ta_b) = rgb(theme.title_accent);
     let (ts_r, ts_g, ts_b) = rgb(theme.timestamp);
 
     // ── Top border ────────────────────────────────────────────────────────────
-    execute!(out,
+    execute!(
+        out,
         SetForegroundColor(bc),
         Print(format!("╭{}╮\n", "─".repeat(outer_width.saturating_sub(2)))),
         ResetColor,
@@ -36,13 +39,22 @@ pub fn print_inline(theme: &Theme) -> io::Result<()> {
     // Visible width: ⏳(2) + " "(1) + "hourglass"(9) + "  "(2) + timestamp(19) = 33
     let ts_str = now.format("%Y-%m-%d %H:%M:%S").to_string();
     let title_visible = 2 + 1 + 9 + 2 + ts_str.len();
-    let title_rpad    = inner_width.saturating_sub(title_visible);
+    let title_rpad = inner_width.saturating_sub(title_visible);
 
     border_left(&mut out, bc)?;
-    execute!(out,
-        SetForegroundColor(CColor::Rgb { r: ta_r, g: ta_g, b: ta_b }),
+    execute!(
+        out,
+        SetForegroundColor(CColor::Rgb {
+            r: ta_r,
+            g: ta_g,
+            b: ta_b
+        }),
         Print("⏳ hourglass"),
-        SetForegroundColor(CColor::Rgb { r: ts_r, g: ts_g, b: ts_b }),
+        SetForegroundColor(CColor::Rgb {
+            r: ts_r,
+            g: ts_g,
+            b: ts_b
+        }),
         Print(format!("  {}", ts_str)),
         Print(" ".repeat(title_rpad)),
     )?;
@@ -57,7 +69,8 @@ pub fn print_inline(theme: &Theme) -> io::Result<()> {
     }
 
     // ── Bottom border ─────────────────────────────────────────────────────────
-    execute!(out,
+    execute!(
+        out,
         SetForegroundColor(bc),
         Print(format!("╰{}╯\n", "─".repeat(outer_width.saturating_sub(2)))),
         ResetColor,
@@ -74,18 +87,23 @@ fn print_item(
     outer_width: usize,
     bc: CColor,
 ) -> io::Result<()> {
-    let pct_str   = format!("{:.1}%", item.fraction * 100.0);
+    let pct_str = format!("{:.1}%", item.fraction * 100.0);
     let label_str = format!("{:<6}", item.label);
-    let detail_w  = item.detail.chars().count();
-    let pad       = inner_width.saturating_sub(label_str.len() + detail_w + pct_str.len());
+    let detail_w = item.detail.chars().count();
+    let pad = inner_width.saturating_sub(label_str.len() + detail_w + pct_str.len());
     let (dt_r, dt_g, dt_b) = rgb(theme.detail_text);
 
     // Label line
     border_left(out, bc)?;
-    execute!(out,
+    execute!(
+        out,
         SetForegroundColor(to_ct(item.color)),
         Print(&label_str),
-        SetForegroundColor(CColor::Rgb { r: dt_r, g: dt_g, b: dt_b }),
+        SetForegroundColor(CColor::Rgb {
+            r: dt_r,
+            g: dt_g,
+            b: dt_b
+        }),
         Print(&item.detail),
         Print(" ".repeat(pad)),
         SetForegroundColor(to_ct(item.color)),
@@ -100,13 +118,21 @@ fn print_item(
 
     border_left(out, bc)?;
     if filled > 0 {
-        execute!(out, SetForegroundColor(to_ct(item.color)), Print(FILLED.repeat(filled)))?;
+        execute!(
+            out,
+            SetForegroundColor(to_ct(item.color)),
+            Print(FILLED.repeat(filled))
+        )?;
     }
     if filled < inner_width {
         execute!(out, SetForegroundColor(to_ct(item.color)), Print(HEAD))?;
         let remaining = inner_width.saturating_sub(filled + 1);
         if remaining > 0 {
-            execute!(out, SetForegroundColor(to_ct(item.dim_color)), Print(EMPTY.repeat(remaining)))?;
+            execute!(
+                out,
+                SetForegroundColor(to_ct(item.dim_color)),
+                Print(EMPTY.repeat(remaining))
+            )?;
         }
     }
     execute!(out, ResetColor)?;
@@ -119,7 +145,13 @@ fn print_item(
 // ── Border helpers ────────────────────────────────────────────────────────────
 
 fn border_left(out: &mut impl Write, bc: CColor) -> io::Result<()> {
-    execute!(out, SetForegroundColor(bc), Print("│"), ResetColor, Print("  "))
+    execute!(
+        out,
+        SetForegroundColor(bc),
+        Print("│"),
+        ResetColor,
+        Print("  ")
+    )
 }
 
 fn border_right(out: &mut impl Write, bc: CColor) -> io::Result<()> {
@@ -127,7 +159,8 @@ fn border_right(out: &mut impl Write, bc: CColor) -> io::Result<()> {
 }
 
 fn empty_line(out: &mut impl Write, outer_width: usize, bc: CColor) -> io::Result<()> {
-    execute!(out,
+    execute!(
+        out,
         SetForegroundColor(bc),
         Print("│"),
         ResetColor,

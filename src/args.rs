@@ -15,14 +15,15 @@ pub fn parse_args() -> Args {
 
     let watch = raw.iter().any(|a| a == "--watch" || a == "-w");
 
-    let theme_flag = raw.windows(2)
+    let theme_flag = raw
+        .windows(2)
         .find(|w| w[0] == "--theme")
         .map(|w| w[1].as_str());
 
     let theme = match theme_flag {
-        Some("dark")  => dark_theme(),
+        Some("dark") => dark_theme(),
         Some("light") => light_theme(),
-        _             => detect_theme(), // "auto" or unset
+        _ => detect_theme(), // "auto" or unset
     };
 
     Args { watch, theme }
