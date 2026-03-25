@@ -1,0 +1,10 @@
+[package]
+name = "hourglass"
+version = "0.1.0"
+edition = "2024"
+description = "Visualize time progress in the terminal"
+
+[dependencies]
+chrono = "0.4"
+crossterm = "0.28"
+ratatui = "0.29"
