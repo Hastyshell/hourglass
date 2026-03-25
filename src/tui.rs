@@ -14,11 +14,13 @@ use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Padding, Paragraph};
 
+use chrono::NaiveDate;
+
 use crate::progress::{ProgressItem, get_progress_items};
 use crate::theme::Theme;
 use crate::{EMPTY, FILLED, HEAD};
 
-pub fn run_tui(theme: &Theme) -> io::Result<()> {
+pub fn run_tui(theme: &Theme, birth: Option<NaiveDate>, lifespan: u32) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
@@ -26,7 +28,7 @@ pub fn run_tui(theme: &Theme) -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     loop {
-        terminal.draw(|f| draw(f, theme))?;
+        terminal.draw(|f| draw(f, theme, birth, lifespan))?;
 
         if event::poll(Duration::from_millis(200))?
             && let Event::Key(key) = event::read()?
@@ -42,7 +44,7 @@ pub fn run_tui(theme: &Theme) -> io::Result<()> {
     Ok(())
 }
 
-fn draw(f: &mut ratatui::Frame, theme: &Theme) {
+fn draw(f: &mut ratatui::Frame, theme: &Theme, birth: Option<NaiveDate>, lifespan: u32) {
     let size = f.area();
 
     f.render_widget(
@@ -50,8 +52,9 @@ fn draw(f: &mut ratatui::Frame, theme: &Theme) {
         size,
     );
 
-    // border(2) + padding_top(1) + title(2) + 5×items(15) + footer(1) = 21
-    let content_height = 21;
+    let items = get_progress_items(theme, birth, lifespan);
+    // border(2) + padding_top(1) + title(2) + n×items(3 each) + footer(1)
+    let content_height = (2 + 1 + 2 + items.len() * 3 + 1) as u16;
     let content_width = 72.min(size.width.saturating_sub(4));
 
     let vert = Layout::default()
@@ -83,17 +86,15 @@ fn draw(f: &mut ratatui::Frame, theme: &Theme) {
     let inner = outer.inner(area);
     f.render_widget(outer, area);
 
+    let mut constraints = vec![Constraint::Length(2)]; // title
+    for _ in &items {
+        constraints.push(Constraint::Length(3));
+    }
+    constraints.push(Constraint::Length(1)); // footer
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(2), // title
-            Constraint::Length(3), // hour
-            Constraint::Length(3), // day
-            Constraint::Length(3), // week
-            Constraint::Length(3), // month
-            Constraint::Length(3), // year
-            Constraint::Length(1), // footer
-        ])
+        .constraints(constraints)
         .split(inner);
 
     let now = Local::now();
@@ -109,7 +110,7 @@ fn draw(f: &mut ratatui::Frame, theme: &Theme) {
         chunks[0],
     );
 
-    let items = get_progress_items(theme);
+    let footer_idx = items.len() + 1;
     for (i, item) in items.iter().enumerate() {
         draw_item(f, chunks[i + 1], item, theme);
     }
@@ -119,7 +120,7 @@ fn draw(f: &mut ratatui::Frame, theme: &Theme) {
             "q / Esc  quit",
             Style::default().fg(theme.footer),
         ))),
-        chunks[6],
+        chunks[footer_idx],
     );
 }
 

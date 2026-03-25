@@ -1,8 +1,12 @@
+use chrono::NaiveDate;
+
 use crate::theme::{Theme, dark_theme, detect_theme, light_theme};
 
 pub struct Args {
     pub watch: bool,
     pub theme: Theme,
+    pub birth: Option<NaiveDate>,
+    pub lifespan: u32,
 }
 
 pub fn parse_args() -> Args {
@@ -23,10 +27,35 @@ pub fn parse_args() -> Args {
     let theme = match theme_flag {
         Some("dark") => dark_theme(),
         Some("light") => light_theme(),
-        _ => detect_theme(), // "auto" or unset
+        _ => detect_theme(),
     };
 
-    Args { watch, theme }
+    // Birth date: --birth flag takes priority over $HOURGLASS_BIRTH
+    let birth_str = raw
+        .windows(2)
+        .find(|w| w[0] == "--birth")
+        .map(|w| w[1].clone())
+        .or_else(|| std::env::var("HOURGLASS_BIRTH").ok());
+
+    let birth = birth_str.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok());
+
+    // Lifespan: --lifespan flag takes priority over $HOURGLASS_LIFESPAN, default 80
+    let lifespan_str = raw
+        .windows(2)
+        .find(|w| w[0] == "--lifespan")
+        .map(|w| w[1].clone())
+        .or_else(|| std::env::var("HOURGLASS_LIFESPAN").ok());
+
+    let lifespan = lifespan_str
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(80);
+
+    Args {
+        watch,
+        theme,
+        birth,
+        lifespan,
+    }
 }
 
 fn print_help() {
@@ -38,8 +67,14 @@ USAGE
   hourglass [OPTIONS]
 
 OPTIONS
-  -w, --watch          live updating full-screen mode
-      --theme THEME    color theme: dark | light | auto (default: auto)
-  -h, --help           show this help"
+  -w, --watch            live updating full-screen mode
+      --theme THEME      color theme: dark | light | auto (default: auto)
+      --birth YYYY-MM-DD birth date for life progress indicator
+      --lifespan YEARS   expected lifespan in years (default: 80)
+  -h, --help             show this help
+
+ENVIRONMENT
+  HOURGLASS_BIRTH        birth date (YYYY-MM-DD), enables life indicator
+  HOURGLASS_LIFESPAN     expected lifespan in years (default: 80)"
     );
 }

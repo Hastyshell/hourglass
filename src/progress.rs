@@ -1,4 +1,4 @@
-use chrono::{Datelike, Local, Timelike};
+use chrono::{Datelike, Local, NaiveDate, Timelike};
 use ratatui::style::Color;
 
 use crate::theme::Theme;
@@ -11,7 +11,11 @@ pub struct ProgressItem {
     pub dim_color: Color,
 }
 
-pub fn get_progress_items(theme: &Theme) -> Vec<ProgressItem> {
+pub fn get_progress_items(
+    theme: &Theme,
+    birth: Option<NaiveDate>,
+    lifespan: u32,
+) -> Vec<ProgressItem> {
     let now = Local::now();
     let minute = now.minute() as f64;
     let second = now.second() as f64;
@@ -65,7 +69,7 @@ pub fn get_progress_items(theme: &Theme) -> Vec<ProgressItem> {
         format!("{}  {} ∕ {:.0}", now.year(), now.ordinal(), days_in_year),
     ];
 
-    labels
+    let mut items: Vec<ProgressItem> = labels
         .iter()
         .enumerate()
         .map(|(i, &label)| ProgressItem {
@@ -75,7 +79,24 @@ pub fn get_progress_items(theme: &Theme) -> Vec<ProgressItem> {
             color: theme.items[i].0,
             dim_color: theme.items[i].1,
         })
-        .collect()
+        .collect();
+
+    if let Some(b) = birth {
+        let today = now.date_naive();
+        let days_lived = (today - b).num_days().max(0) as f64;
+        let total_days = lifespan as f64 * 365.25;
+        let life_frac = (days_lived / total_days).clamp(0.0, 1.0);
+        let age = (days_lived / 365.25).floor() as u32;
+        items.push(ProgressItem {
+            label: "Life",
+            fraction: life_frac,
+            detail: format!("{}  {} ∕ {}", b.year(), age, lifespan),
+            color: theme.items[5].0,
+            dim_color: theme.items[5].1,
+        });
+    }
+
+    items
 }
 
 fn days_in_current_month(dt: &chrono::DateTime<Local>) -> u32 {
