@@ -52,14 +52,12 @@ pub fn light_theme() -> Theme {
 /// Format is "fg;bg" where bg >= 8 typically means a light background.
 /// Falls back to dark if unset or ambiguous.
 pub fn detect_theme() -> Theme {
-    if let Ok(val) = std::env::var("COLORFGBG") {
-        if let Some(bg_str) = val.split(';').last() {
-            if let Ok(bg) = bg_str.trim().parse::<u8>() {
-                if bg >= 8 {
-                    return light_theme();
-                }
-            }
-        }
+    if let Ok(val) = std::env::var("COLORFGBG")
+        && let Some(bg_str) = val.split(';').next_back()
+        && let Ok(bg) = bg_str.trim().parse::<u8>()
+        && bg >= 8
+    {
+        return light_theme();
     }
     dark_theme()
 }
