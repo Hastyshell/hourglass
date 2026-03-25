@@ -19,7 +19,7 @@ pub fn dark_theme() -> Theme {
         detail_text:  Color::Rgb(140, 140, 160),
         footer:       Color::Rgb(60,  60,  80),
         tui_bg:       Color::Rgb(16,  16,  20),
-        tui_border:   Color::Rgb(60,  60,  80),
+        tui_border:   Color::Rgb(140, 140, 160),
         items: [
             (Color::Rgb(0,   210, 210), Color::Rgb(0,   50,  50)),  // Hour  – cyan
             (Color::Rgb(90,  140, 255), Color::Rgb(20,  30,  70)),  // Day   – blue
