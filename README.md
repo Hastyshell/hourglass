@@ -22,11 +22,13 @@ Written during a full rebuild of a large codebase at work — the kind where you
 cargo install --path .
 ```
 
-With Nix (flake):
+With Nix:
 
 ```sh
-nix develop   # drop into dev shell
-cargo build --release
+# run without installing
+nix run github:Hastyshell/hourglass
+
+# or add as a flake input to your NixOS / home-manager config
 ```
 
 ## Usage
