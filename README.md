@@ -17,10 +17,19 @@ Written during a full rebuild of a large codebase at work — the kind where you
 
 ## Install
 
-Pre-built binaries are available on the [Releases](https://github.com/Hastyshell/hourglass/releases) page. Download, extract, and put it somewhere in your `$PATH`:
+Pre-built binaries for Linux and macOS are available on the [Releases](https://github.com/Hastyshell/hourglass/releases) page.
+
+| Platform | File |
+|---|---|
+| Linux x86_64 | `hourglass-linux-x86_64.tar.gz` |
+| Linux aarch64 | `hourglass-linux-aarch64.tar.gz` |
+| macOS Apple Silicon | `hourglass-macos-aarch64.tar.gz` |
+| macOS Intel | `hourglass-macos-x86_64.tar.gz` |
+
+Download, extract, and move it to `~/.local/bin/` (make sure it's in your `$PATH`):
 
 ```sh
-tar xzf hourglass-linux-x86_64.tar.gz
+tar xzf hourglass-<platform>.tar.gz
 mv hourglass ~/.local/bin/
 ```
 
