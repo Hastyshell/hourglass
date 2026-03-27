@@ -6,7 +6,7 @@ Most clocks tell you *what time it is*. This one tells you *how much is left* �
 
 Written during a full rebuild of a large codebase at work — the kind where you start the build, make a coffee, and still have time to vibe-code a side project. Somewhere in that waiting, it occurred to me that time doesn't feel like a clock anymore — it feels like a token quota. Allocated at birth, burning down with every second, no top-ups, no rollover.
 
-![hourglass inline mode](https://github.com/user-attachments/assets/placeholder)
+<img src="assets/preview.png" width="600" />
 
 ## Features
 
