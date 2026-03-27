@@ -17,8 +17,16 @@ Written during a full rebuild of a large codebase at work — the kind where you
 
 ## Install
 
+Pre-built binaries are available on the [Releases](https://github.com/Hastyshell/hourglass/releases) page. Download, extract, and put it somewhere in your `$PATH`:
+
 ```sh
-# from source
+tar xzf hourglass-linux-x86_64.tar.gz
+mv hourglass ~/.local/bin/
+```
+
+From source:
+
+```sh
 cargo install --path .
 ```
 
