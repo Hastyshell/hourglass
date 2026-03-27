@@ -17,7 +17,13 @@ Written during a full rebuild of a large codebase at work — the kind where you
 
 ## Install
 
-Pre-built binaries for Linux and macOS are available on the [Releases](https://github.com/Hastyshell/hourglass/releases) page.
+**macOS (Homebrew):**
+
+```sh
+brew install Hastyshell/hourglass
+```
+
+Pre-built binaries for Linux and macOS are also available on the [Releases](https://github.com/Hastyshell/hourglass/releases) page.
 
 | Platform | File |
 |---|---|
