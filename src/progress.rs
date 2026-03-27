@@ -99,6 +99,62 @@ pub fn get_progress_items(
     items
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    // --- days_in_current_month ---
+
+    #[test]
+    fn days_in_december() {
+        let dt = Local.with_ymd_and_hms(2024, 12, 15, 0, 0, 0).unwrap();
+        assert_eq!(days_in_current_month(&dt), 31);
+    }
+
+    #[test]
+    fn days_in_february_leap_year() {
+        let dt = Local.with_ymd_and_hms(2024, 2, 1, 0, 0, 0).unwrap();
+        assert_eq!(days_in_current_month(&dt), 29);
+    }
+
+    #[test]
+    fn days_in_february_non_leap_year() {
+        let dt = Local.with_ymd_and_hms(2023, 2, 1, 0, 0, 0).unwrap();
+        assert_eq!(days_in_current_month(&dt), 28);
+    }
+
+    // --- life fraction ---
+
+    fn life_frac(today: NaiveDate, birth: NaiveDate, lifespan: u32) -> f64 {
+        let days_lived = (today - birth).num_days().max(0) as f64;
+        let total_days = lifespan as f64 * 365.25;
+        (days_lived / total_days).clamp(0.0, 1.0)
+    }
+
+    #[test]
+    fn life_frac_future_birth_clamps_to_zero() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let birth = NaiveDate::from_ymd_opt(2030, 6, 1).unwrap();
+        assert_eq!(life_frac(today, birth, 80), 0.0);
+    }
+
+    #[test]
+    fn life_frac_exceeds_lifespan_clamps_to_one() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let birth = NaiveDate::from_ymd_opt(1900, 1, 1).unwrap();
+        assert_eq!(life_frac(today, birth, 80), 1.0);
+    }
+
+    #[test]
+    fn life_frac_midpoint() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let birth = NaiveDate::from_ymd_opt(1986, 1, 1).unwrap();
+        let f = life_frac(today, birth, 80);
+        assert!((f - 0.5).abs() < 0.01, "expected ~0.5, got {f}");
+    }
+}
+
 fn days_in_current_month(dt: &chrono::DateTime<Local>) -> u32 {
     let (year, month) = (dt.year(), dt.month());
     let next = if month == 12 {
