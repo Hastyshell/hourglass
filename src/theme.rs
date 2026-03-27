@@ -21,11 +21,11 @@ pub fn dark_theme() -> Theme {
         tui_bg: Color::Rgb(16, 16, 20),
         tui_border: Color::Rgb(140, 140, 160),
         items: [
-            (Color::Rgb(0, 210, 210), Color::Rgb(0, 80, 80)),    // Hour  – cyan
+            (Color::Rgb(0, 210, 210), Color::Rgb(0, 80, 80)), // Hour  – cyan
             (Color::Rgb(90, 140, 255), Color::Rgb(30, 50, 100)), // Day   – blue
-            (Color::Rgb(210, 90, 210), Color::Rgb(85, 30, 85)),  // Week  – magenta
-            (Color::Rgb(230, 190, 0), Color::Rgb(90, 75, 0)),    // Month – yellow
-            (Color::Rgb(80, 210, 80), Color::Rgb(25, 85, 25)),   // Year  – green
+            (Color::Rgb(210, 90, 210), Color::Rgb(85, 30, 85)), // Week  – magenta
+            (Color::Rgb(230, 190, 0), Color::Rgb(90, 75, 0)), // Month – yellow
+            (Color::Rgb(80, 210, 80), Color::Rgb(25, 85, 25)), // Year  – green
             (Color::Rgb(255, 110, 60), Color::Rgb(100, 40, 20)), // Life  – orange
         ],
     }
@@ -40,12 +40,12 @@ pub fn light_theme() -> Theme {
         tui_bg: Color::Rgb(248, 248, 252),
         tui_border: Color::Rgb(190, 190, 210),
         items: [
-            (Color::Rgb(0, 150, 150), Color::Rgb(180, 230, 230)),  // Hour  – teal
+            (Color::Rgb(0, 150, 150), Color::Rgb(180, 230, 230)), // Hour  – teal
             (Color::Rgb(50, 100, 220), Color::Rgb(195, 215, 255)), // Day   – blue
             (Color::Rgb(160, 50, 160), Color::Rgb(230, 185, 230)), // Week  – purple
-            (Color::Rgb(160, 120, 0), Color::Rgb(250, 235, 170)),  // Month – amber
-            (Color::Rgb(30, 150, 30), Color::Rgb(185, 235, 185)),  // Year  – green
-            (Color::Rgb(210, 80, 30), Color::Rgb(255, 215, 195)),  // Life  – orange
+            (Color::Rgb(160, 120, 0), Color::Rgb(250, 235, 170)), // Month – amber
+            (Color::Rgb(30, 150, 30), Color::Rgb(185, 235, 185)), // Year  – green
+            (Color::Rgb(210, 80, 30), Color::Rgb(255, 215, 195)), // Life  – orange
         ],
     }
 }
