@@ -54,3 +54,49 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload ${{ github.event.release.tag_name }} ${{ matrix.name }}.tar.gz
+
+      - name: Save SHA256 artifact
+        if: matrix.os == 'macos-latest'
+        run: shasum -a 256 ${{ matrix.name }}.tar.gz | awk '{print $1}' > ${{ matrix.name }}.sha256
+
+      - name: Upload SHA256 artifact
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-sha256
+          path: ${{ matrix.name }}.sha256
+
+  update-homebrew:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download SHA256 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hourglass-macos-*-sha256
+          merge-multiple: true
+
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION=${TAG#v}
+          SHA256_AARCH64=$(cat hourglass-macos-aarch64.sha256)
+          SHA256_X86_64=$(cat hourglass-macos-x86_64.sha256)
+
+          git clone https://x-access-token:${GH_TOKEN}@github.com/Hastyshell/homebrew-hourglass.git
+          cd homebrew-hourglass
+
+          AARCH64_LINE=$(grep -n "aarch64.tar.gz" Formula/hourglass.rb | cut -d: -f1)
+          X86_64_LINE=$(grep -n "x86_64.tar.gz" Formula/hourglass.rb | cut -d: -f1)
+
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/hourglass.rb
+          sed -i "$((AARCH64_LINE+1))s/sha256 \".*\"/sha256 \"${SHA256_AARCH64}\"/" Formula/hourglass.rb
+          sed -i "$((X86_64_LINE+1))s/sha256 \".*\"/sha256 \"${SHA256_X86_64}\"/" Formula/hourglass.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/hourglass.rb
+          git diff --cached --quiet || git commit -m "chore: update formula for ${TAG}"
+          git push
