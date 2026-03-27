@@ -17,42 +17,31 @@ Written during a full rebuild of a large codebase at work — the kind where you
 
 ## Install
 
-**macOS (Homebrew):**
-
+**macOS:**
 ```sh
 brew install Hastyshell/hourglass
 ```
 
-Pre-built binaries for Linux and macOS are also available on the [Releases](https://github.com/Hastyshell/hourglass/releases) page.
+**Linux / macOS (binary):**
 
-| Platform | File |
-|---|---|
-| Linux x86_64 | `hourglass-linux-x86_64.tar.gz` |
-| Linux aarch64 | `hourglass-linux-aarch64.tar.gz` |
-| macOS Apple Silicon | `hourglass-macos-aarch64.tar.gz` |
-| macOS Intel | `hourglass-macos-x86_64.tar.gz` |
-
-Download, extract, and move it to `~/.local/bin/` (make sure it's in your `$PATH`):
+Download the appropriate binary from the [Releases](https://github.com/Hastyshell/hourglass/releases) page, extract, and move it to somewhere in your `$PATH`:
 
 ```sh
 tar xzf hourglass-<platform>.tar.gz
 mv hourglass ~/.local/bin/
 ```
 
-From source:
+**Nix:**
+```sh
+nix run github:Hastyshell/hourglass   # run without installing
+# or add as a flake input to your NixOS / home-manager config
+```
 
+**From source:**
 ```sh
 cargo install --path .
 ```
 
-With Nix:
-
-```sh
-# run without installing
-nix run github:Hastyshell/hourglass
-
-# or add as a flake input to your NixOS / home-manager config
-```
 
 ## Usage
 
