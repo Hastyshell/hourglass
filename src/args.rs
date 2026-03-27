@@ -17,6 +17,34 @@ pub fn parse_args() -> Args {
         std::process::exit(0);
     }
 
+    // Validate arguments
+    let known_flags = [
+        "--watch",
+        "-w",
+        "--theme",
+        "--birth",
+        "--lifespan",
+        "-h",
+        "--help",
+    ];
+    let known_value_flags = ["--theme", "--birth", "--lifespan"];
+    let mut iter = raw.iter().skip(1).peekable();
+    while let Some(arg) = iter.next() {
+        if known_value_flags.contains(&arg.as_str()) {
+            let missing = iter.peek().is_none_or(|v| v.starts_with('-'));
+            if missing {
+                eprintln!("error: `{arg}` requires a value\n");
+                print_help();
+                std::process::exit(1);
+            }
+            iter.next(); // consume value
+        } else if !known_flags.contains(&arg.as_str()) {
+            eprintln!("error: unknown argument `{arg}`\n");
+            print_help();
+            std::process::exit(1);
+        }
+    }
+
     let watch = raw.iter().any(|a| a == "--watch" || a == "-w");
 
     let theme_flag = raw
@@ -27,7 +55,13 @@ pub fn parse_args() -> Args {
     let theme = match theme_flag {
         Some("dark") => dark_theme(),
         Some("light") => light_theme(),
-        _ => detect_theme(),
+        Some("auto") => detect_theme(),
+        Some(other) => {
+            eprintln!("error: unknown theme `{other}` (expected: dark | light | auto)\n");
+            print_help();
+            std::process::exit(1);
+        }
+        None => detect_theme(),
     };
 
     // Birth date: --birth flag takes priority over $HOURGLASS_BIRTH
