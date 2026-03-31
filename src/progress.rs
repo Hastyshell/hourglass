@@ -1,4 +1,4 @@
-use chrono::{Datelike, Local, NaiveDate, Timelike};
+use chrono::{Datelike, Local, NaiveDate, NaiveTime, Timelike};
 use ratatui::style::Color;
 
 use crate::theme::Theme;
@@ -15,6 +15,8 @@ pub fn get_progress_items(
     theme: &Theme,
     birth: Option<NaiveDate>,
     lifespan: u32,
+    day_start: NaiveTime,
+    day_end: NaiveTime,
 ) -> Vec<ProgressItem> {
     let now = Local::now();
     let minute = now.minute() as f64;
@@ -24,7 +26,7 @@ pub fn get_progress_items(
     let hour_frac = (minute * 60.0 + second) / 3600.0;
 
     let day_secs = hour * 3600.0 + minute * 60.0 + second;
-    let day_frac = day_secs / 86400.0;
+    let day_frac = day_fraction(now.time(), day_start, day_end);
 
     let weekday = now.weekday().num_days_from_monday() as f64;
     let week_frac = (weekday * 86400.0 + day_secs) / (7.0 * 86400.0);
@@ -99,6 +101,39 @@ pub fn get_progress_items(
     items
 }
 
+fn day_fraction(now: NaiveTime, day_start: NaiveTime, day_end: NaiveTime) -> f64 {
+    let now_secs = now.num_seconds_from_midnight();
+    let start_secs = day_start.num_seconds_from_midnight();
+    let end_secs = day_end.num_seconds_from_midnight();
+
+    if start_secs == end_secs {
+        return now_secs as f64 / 86_400.0;
+    }
+
+    if start_secs < end_secs {
+        let total = end_secs - start_secs;
+        let elapsed = if now_secs <= start_secs {
+            0
+        } else if now_secs >= end_secs {
+            total
+        } else {
+            now_secs - start_secs
+        };
+        return elapsed as f64 / total as f64;
+    }
+
+    let total = 86_400 - start_secs + end_secs;
+    let elapsed = if now_secs >= start_secs {
+        now_secs - start_secs
+    } else if now_secs <= end_secs {
+        86_400 - start_secs + now_secs
+    } else {
+        0
+    };
+
+    elapsed as f64 / total as f64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,6 +187,60 @@ mod tests {
         let birth = NaiveDate::from_ymd_opt(1986, 1, 1).unwrap();
         let f = life_frac(today, birth, 80);
         assert!((f - 0.5).abs() < 0.01, "expected ~0.5, got {f}");
+    }
+
+    // --- day fraction ---
+
+    #[test]
+    fn day_frac_defaults_to_full_day() {
+        let now = NaiveTime::from_hms_opt(12, 0, 0).unwrap();
+        let midnight = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+        assert_eq!(day_fraction(now, midnight, midnight), 0.5);
+    }
+
+    #[test]
+    fn day_frac_before_start_clamps_to_zero() {
+        let now = NaiveTime::from_hms_opt(7, 30, 0).unwrap();
+        let start = NaiveTime::from_hms_opt(8, 0, 0).unwrap();
+        let end = NaiveTime::from_hms_opt(23, 0, 0).unwrap();
+        assert_eq!(day_fraction(now, start, end), 0.0);
+    }
+
+    #[test]
+    fn day_frac_after_end_clamps_to_one() {
+        let now = NaiveTime::from_hms_opt(23, 30, 0).unwrap();
+        let start = NaiveTime::from_hms_opt(8, 0, 0).unwrap();
+        let end = NaiveTime::from_hms_opt(23, 0, 0).unwrap();
+        assert_eq!(day_fraction(now, start, end), 1.0);
+    }
+
+    #[test]
+    fn day_frac_inside_custom_window() {
+        let now = NaiveTime::from_hms_opt(15, 30, 0).unwrap();
+        let start = NaiveTime::from_hms_opt(9, 0, 0).unwrap();
+        let end = NaiveTime::from_hms_opt(21, 0, 0).unwrap();
+        let f = day_fraction(now, start, end);
+        assert!(
+            (f - 0.541_666_666_7).abs() < 1e-9,
+            "expected ~0.5417, got {f}"
+        );
+    }
+
+    #[test]
+    fn day_frac_wraps_past_midnight() {
+        let now = NaiveTime::from_hms_opt(1, 0, 0).unwrap();
+        let start = NaiveTime::from_hms_opt(18, 0, 0).unwrap();
+        let end = NaiveTime::from_hms_opt(2, 0, 0).unwrap();
+        let f = day_fraction(now, start, end);
+        assert!((f - 0.875).abs() < 1e-9, "expected 0.875, got {f}");
+    }
+
+    #[test]
+    fn day_frac_wrap_gap_clamps_to_zero() {
+        let now = NaiveTime::from_hms_opt(10, 0, 0).unwrap();
+        let start = NaiveTime::from_hms_opt(18, 0, 0).unwrap();
+        let end = NaiveTime::from_hms_opt(2, 0, 0).unwrap();
+        assert_eq!(day_fraction(now, start, end), 0.0);
     }
 }
 

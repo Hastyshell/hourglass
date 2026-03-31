@@ -14,13 +14,19 @@ use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Padding, Paragraph};
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 
 use crate::progress::{ProgressItem, get_progress_items};
 use crate::theme::Theme;
 use crate::{EMPTY, FILLED, HEAD};
 
-pub fn run_tui(theme: &Theme, birth: Option<NaiveDate>, lifespan: u32) -> io::Result<()> {
+pub fn run_tui(
+    theme: &Theme,
+    birth: Option<NaiveDate>,
+    lifespan: u32,
+    day_start: NaiveTime,
+    day_end: NaiveTime,
+) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
@@ -28,7 +34,7 @@ pub fn run_tui(theme: &Theme, birth: Option<NaiveDate>, lifespan: u32) -> io::Re
     let mut terminal = Terminal::new(backend)?;
 
     loop {
-        terminal.draw(|f| draw(f, theme, birth, lifespan))?;
+        terminal.draw(|f| draw(f, theme, birth, lifespan, day_start, day_end))?;
 
         if event::poll(Duration::from_millis(200))?
             && let Event::Key(key) = event::read()?
@@ -44,7 +50,14 @@ pub fn run_tui(theme: &Theme, birth: Option<NaiveDate>, lifespan: u32) -> io::Re
     Ok(())
 }
 
-fn draw(f: &mut ratatui::Frame, theme: &Theme, birth: Option<NaiveDate>, lifespan: u32) {
+fn draw(
+    f: &mut ratatui::Frame,
+    theme: &Theme,
+    birth: Option<NaiveDate>,
+    lifespan: u32,
+    day_start: NaiveTime,
+    day_end: NaiveTime,
+) {
     let size = f.area();
 
     f.render_widget(
@@ -52,7 +65,7 @@ fn draw(f: &mut ratatui::Frame, theme: &Theme, birth: Option<NaiveDate>, lifespa
         size,
     );
 
-    let items = get_progress_items(theme, birth, lifespan);
+    let items = get_progress_items(theme, birth, lifespan, day_start, day_end);
     // border(2) + padding_top(1) + title(2) + n×items(3 each) + footer(1)
     let content_height = (2 + 1 + 2 + items.len() * 3 + 1) as u16;
     let content_width = 72.min(size.width.saturating_sub(4));

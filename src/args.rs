@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 
 use crate::theme::{Theme, dark_theme, detect_theme, light_theme};
 
@@ -7,6 +7,8 @@ pub struct Args {
     pub theme: Theme,
     pub birth: Option<NaiveDate>,
     pub lifespan: u32,
+    pub day_start: NaiveTime,
+    pub day_end: NaiveTime,
 }
 
 pub fn parse_args() -> Args {
@@ -84,11 +86,24 @@ pub fn parse_args() -> Args {
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(80);
 
+    // Day window: active part of the day used for the Day progress bar.
+    // When start == end, preserve the original full-day semantics.
+    let day_start = std::env::var("HOURGLASS_DAY_START")
+        .ok()
+        .and_then(|s| parse_time_value(&s))
+        .unwrap_or_else(midnight);
+    let day_end = std::env::var("HOURGLASS_DAY_END")
+        .ok()
+        .and_then(|s| parse_time_value(&s))
+        .unwrap_or_else(midnight);
+
     Args {
         watch,
         theme,
         birth,
         lifespan,
+        day_start,
+        day_end,
     }
 }
 
@@ -109,6 +124,40 @@ OPTIONS
 
 ENVIRONMENT
   HOURGLASS_BIRTH        birth date (YYYY-MM-DD), enables life indicator
-  HOURGLASS_LIFESPAN     expected lifespan in years (default: 80)"
+  HOURGLASS_LIFESPAN     expected lifespan in years (default: 80)
+  HOURGLASS_DAY_START    active day start time (HH:MM or HH:MM:SS, default: 00:00)
+  HOURGLASS_DAY_END      active day end time (HH:MM or HH:MM:SS, default: 00:00)"
     );
+}
+
+fn midnight() -> NaiveTime {
+    NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+}
+
+fn parse_time_value(value: &str) -> Option<NaiveTime> {
+    ["%H:%M", "%H:%M:%S"]
+        .iter()
+        .find_map(|fmt| NaiveTime::parse_from_str(value, fmt).ok())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_time_value_supports_hour_minute() {
+        let parsed = parse_time_value("08:30").unwrap();
+        assert_eq!(parsed, NaiveTime::from_hms_opt(8, 30, 0).unwrap());
+    }
+
+    #[test]
+    fn parse_time_value_supports_seconds() {
+        let parsed = parse_time_value("23:15:45").unwrap();
+        assert_eq!(parsed, NaiveTime::from_hms_opt(23, 15, 45).unwrap());
+    }
+
+    #[test]
+    fn parse_time_value_rejects_invalid_input() {
+        assert!(parse_time_value("25:00").is_none());
+    }
 }

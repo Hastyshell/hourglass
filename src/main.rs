@@ -13,8 +13,20 @@ pub(crate) const HEAD: &str = "╸";
 fn main() -> io::Result<()> {
     let args = args::parse_args();
     if args.watch {
-        tui::run_tui(&args.theme, args.birth, args.lifespan)
+        tui::run_tui(
+            &args.theme,
+            args.birth,
+            args.lifespan,
+            args.day_start,
+            args.day_end,
+        )
     } else {
-        inline::print_inline(&args.theme, args.birth, args.lifespan)
+        inline::print_inline(
+            &args.theme,
+            args.birth,
+            args.lifespan,
+            args.day_start,
+            args.day_end,
+        )
     }
 }
