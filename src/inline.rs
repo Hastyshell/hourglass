@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use chrono::{Local, NaiveDate};
+use chrono::{Local, NaiveDate, NaiveTime};
 use crossterm::execute;
 use crossterm::style::{Color as CColor, Print, ResetColor, SetForegroundColor};
 
@@ -8,7 +8,13 @@ use crate::progress::{ProgressItem, get_progress_items};
 use crate::theme::{Theme, rgb, to_ct};
 use crate::{EMPTY, FILLED, HEAD};
 
-pub fn print_inline(theme: &Theme, birth: Option<NaiveDate>, lifespan: u32) -> io::Result<()> {
+pub fn print_inline(
+    theme: &Theme,
+    birth: Option<NaiveDate>,
+    lifespan: u32,
+    day_start: NaiveTime,
+    day_end: NaiveTime,
+) -> io::Result<()> {
     let term_width = crossterm::terminal::size()
         .map(|(w, _)| w as usize)
         .unwrap_or(80);
@@ -17,7 +23,7 @@ pub fn print_inline(theme: &Theme, birth: Option<NaiveDate>, lifespan: u32) -> i
     let inner_width = outer_width.saturating_sub(6);
 
     let now = Local::now();
-    let items = get_progress_items(theme, birth, lifespan);
+    let items = get_progress_items(theme, birth, lifespan, day_start, day_end);
     let mut out = io::stdout();
 
     let bc = to_ct(theme.tui_border);

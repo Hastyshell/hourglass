@@ -57,8 +57,12 @@ Or via environment variables:
 ```sh
 export HOURGLASS_BIRTH=1990-06-15
 export HOURGLASS_LIFESPAN=85
+export HOURGLASS_DAY_START=08:00
+export HOURGLASS_DAY_END=23:00
 hourglass
 ```
+
+Set `HOURGLASS_DAY_START` / `HOURGLASS_DAY_END` to make the `Day` bar measure only your waking hours. If both are left at `00:00`, it keeps the original 24-hour behavior.
 
 ```
 OPTIONS
@@ -71,6 +75,8 @@ OPTIONS
 ENVIRONMENT
   HOURGLASS_BIRTH        birth date (YYYY-MM-DD), enables life indicator
   HOURGLASS_LIFESPAN     expected lifespan in years (default: 80)
+  HOURGLASS_DAY_START    active day start time (HH:MM or HH:MM:SS, default: 00:00)
+  HOURGLASS_DAY_END      active day end time (HH:MM or HH:MM:SS, default: 00:00)
 ```
 
 ## Stack
