@@ -50,6 +50,7 @@ hourglass                        # inline snapshot
 hourglass -w                     # watch mode
 hourglass --theme light          # force light theme
 hourglass --birth 1990-06-15     # enable life progress indicator
+hourglass --day-start 08:00 --day-end 23:00  # custom waking hours
 ```
 
 Or via environment variables:
@@ -70,6 +71,8 @@ OPTIONS
       --theme THEME      color theme: dark | light | auto (default: auto)
       --birth YYYY-MM-DD birth date for life progress indicator
       --lifespan YEARS   expected lifespan in years (default: 80)
+      --day-start HH:MM[:SS]  active day start time (default: 00:00)
+      --day-end HH:MM[:SS]    active day end time (default: 00:00)
   -h, --help             show this help
 
 ENVIRONMENT

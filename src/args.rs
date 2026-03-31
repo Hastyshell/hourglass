@@ -26,10 +26,18 @@ pub fn parse_args() -> Args {
         "--theme",
         "--birth",
         "--lifespan",
+        "--day-start",
+        "--day-end",
         "-h",
         "--help",
     ];
-    let known_value_flags = ["--theme", "--birth", "--lifespan"];
+    let known_value_flags = [
+        "--theme",
+        "--birth",
+        "--lifespan",
+        "--day-start",
+        "--day-end",
+    ];
     let mut iter = raw.iter().skip(1).peekable();
     while let Some(arg) = iter.next() {
         if known_value_flags.contains(&arg.as_str()) {
@@ -86,16 +94,33 @@ pub fn parse_args() -> Args {
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(80);
 
-    // Day window: active part of the day used for the Day progress bar.
+    // Day window: --day-start/--day-end flags take priority over env vars.
     // When start == end, preserve the original full-day semantics.
-    let day_start = std::env::var("HOURGLASS_DAY_START")
-        .ok()
-        .and_then(|s| parse_time_value(&s))
-        .unwrap_or_else(midnight);
-    let day_end = std::env::var("HOURGLASS_DAY_END")
-        .ok()
-        .and_then(|s| parse_time_value(&s))
-        .unwrap_or_else(midnight);
+    let day_start_str = raw
+        .windows(2)
+        .find(|w| w[0] == "--day-start")
+        .map(|w| w[1].clone())
+        .or_else(|| std::env::var("HOURGLASS_DAY_START").ok());
+    let day_start = match &day_start_str {
+        Some(s) => parse_time_value(s).unwrap_or_else(|| {
+            eprintln!("warning: invalid day-start `{s}`, falling back to 00:00");
+            midnight()
+        }),
+        None => midnight(),
+    };
+
+    let day_end_str = raw
+        .windows(2)
+        .find(|w| w[0] == "--day-end")
+        .map(|w| w[1].clone())
+        .or_else(|| std::env::var("HOURGLASS_DAY_END").ok());
+    let day_end = match &day_end_str {
+        Some(s) => parse_time_value(s).unwrap_or_else(|| {
+            eprintln!("warning: invalid day-end `{s}`, falling back to 00:00");
+            midnight()
+        }),
+        None => midnight(),
+    };
 
     Args {
         watch,
@@ -120,6 +145,8 @@ OPTIONS
       --theme THEME      color theme: dark | light | auto (default: auto)
       --birth YYYY-MM-DD birth date for life progress indicator
       --lifespan YEARS   expected lifespan in years (default: 80)
+      --day-start HH:MM[:SS]  active day start time (default: 00:00)
+      --day-end HH:MM[:SS]    active day end time (default: 00:00)
   -h, --help             show this help
 
 ENVIRONMENT
